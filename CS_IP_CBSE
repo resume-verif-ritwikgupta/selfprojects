@@ -1,0 +1,405 @@
+#include<time.h>
+#include<iostream.h>
+#include<conio.h>
+#include<string.h>
+#include<stdio.h>
+#include<stdlib.h>
+#include<dos.h>
+#include<fstream.h>
+void gscreen() ;
+int login() ;
+int pos ;
+ifstream fin("userdata.txt") ;
+ofstream fout("userdata.txt",ios::ate) ;
+int account=0,i ;
+class info
+{
+      private:
+      char name[15] ;
+      int money ;
+      char password[15] ;
+      public:
+      info()
+      {
+	money=2000 ;
+      }
+      void get_info()
+      {
+	cout<<"\n\n\t\tEnter Username(Max 15 characters): " ;
+	gets(name) ;
+	cout<<"\n\n\t\tEnter Password(Max 15 characters): " ;
+	gets(password) ;
+      }
+      void update(int a)
+      {
+	money=a ;
+      }
+      int get_money()
+      {
+	return money ;
+      }
+      char* getname()
+      {
+	return name ;
+      }
+      char* getpassword()
+      {
+	return password ;
+      }
+}user;
+void create_account()
+{
+	user.get_info() ;
+	fout.write((char*)&user,sizeof(info)) ;
+	account++ ;
+}
+int login()
+{
+	clrscr() ;
+	char usern[15],userp[15] ;
+	int success=0 ;
+	   cout<<"\n\n\t\t\tUsername: " ;
+	   gets(usern) ;
+	   cout<<"\n\t\t\tPassword: " ;
+	   gets(userp) ;
+	   i=0 ;
+	   while(!(fin.eof()))
+	   {
+	   fin.read((char*)&user,sizeof(user)) ;
+	   for(i=0;i<10;i++)
+	   {
+	   if((strcmp(usern,user.getname())==0)&&(strcmp(userp,user.getpassword())==0))
+	   {
+	      cout<<"Login Sucessfull!" ;
+	      delay(1000) ;
+	      success=1 ;
+	      pos=fout.tellp();
+	      gscreen() ;
+	      break ;
+	   }
+	   if(success==0)
+	   {
+		cout<<"Invalid Combo!!" ;
+		delay(2000);
+		login();
+	   }
+	   }
+	   }
+	   return i ;
+}
+int money=2000 ;
+void slots();
+void accuracy();
+void roulette();
+void main()
+{
+ s:
+ clrscr();
+ int a;
+ cout<<"\t\t\t  ||WELCOME TO HERCULES CASINO|| ";
+ cout<<"\n\n\n\t\t\tPress 1 to sign in to existing account\n\n\t\t\tPress 2 to create new account\n\n\t\t\tPress 3 to exit" ;
+ cin>>a ;
+ if(a==2)
+ {
+	create_account() ;
+	goto s;
+ }
+ else if(a==1)
+ {
+	login() ;
+	clrscr() ;
+ }
+ else
+ exit(0) ;
+ }
+ void gscreen()
+ {
+ cout<<"\n\t\t\t WHAT WOULD YOU LIKE TO PLAY?" ;
+ cout<<"\n\t\t\t\t\t\t\t\t "<<user.get_money()<<" DOLLARS ";
+ cout<<"\n1. SLOTS";
+ cout<<"\n2. REACTION ACCURACY GAME";
+ cout<<"\n3. ROULETTE ";
+ cout<<"\n0. Log out" ;
+ cout<<"\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\t\t\t\t\t\t\t\tPress 4 to exit"<<"\n";
+ int a ;
+ cin>>a;
+ if(a==1)
+ slots();
+ if(a==2)
+ accuracy();
+ if(a==3)
+ roulette();
+ if(a==0)
+ {
+  fout.seekp(pos,ios::beg) ;
+  fout.write((char*)&user,sizeof(info));
+  main() ;
+ }
+ if(a==4)
+ {
+  fout.seekp(pos,ios::beg);
+  fout.write((char*)&user,sizeof(info)) ;
+  cout<<"\nGoodbye. Hope you had a good time.";
+  delay(3000);
+  exit(0);
+ }
+ getch();
+}
+void slots()
+{
+ int n1,n2,n3,z,gameon,betmoney;
+ clrscr();
+ cout<<"\t\t\t  || WELCOME TO SLOTS.||" ;
+ cout<<"\n You currently have "<<user.get_money()<<" dollars right now.";
+ do
+ { randomize();
+   cout<<"\n How much money do you want to bet?"<<endl;
+   cin>>betmoney;
+   if(betmoney>user.get_money())
+   { cout<<" You don't have enough funds.";
+     cout<<"\n You currently have "<<user.get_money();
+     cin>>betmoney;
+   }
+   n1=(rand()%4)+1;
+   n2=(rand()%4)+1;
+   n3=(rand()%4)+1;
+   for(int n=0;n<5;n++)
+   {
+     for (int i=0;i<10;i++)
+     {
+       cout<<"\n\t"<<rand()%9<<" "<<rand()%6<<" "<<rand()%5;
+       delay(40);
+       clrscr();
+     }
+   }
+   cout<<endl;
+   cout<<"\t"<<n1<<" ";
+   delay(500);
+   cout<<n2<<" ";
+   delay(500);
+   cout<<n3;
+   if(n1==n2&&n2==n3)
+   { money+=(4*betmoney);
+     user.update(money);
+     cout<<"\nYou WON!!!";
+   }
+   else
+   {
+     money-=betmoney;
+     user.update(money);
+     cout<<"\nYou have LOST!!!";
+   }
+   if(user.get_money()==0)
+   {
+    cout<<"\nGoodbye. The house always wins.";
+    delay(3000);
+    exit(0);
+   }
+   cout<<"\n You currently have "<<user.get_money()<<" dollars. ";
+   cout<<"\n Would you like to continue?";
+   cout<<"\n 1.Yes  \t 2.No";
+   cin>>z;
+   if(z==1)
+   gameon=0;
+   else if(z==2)
+   {
+	fout.seekp(pos) ;
+	fout.write((char*)&user,sizeof(info)) ;
+	gscreen() ;
+   }
+   }while(user.get_money()>0&&gameon==0) ;
+
+}
+void accuracy()
+{
+ int x,i,gameon,betmoney;
+ char z;
+ clrscr();
+ cout<<"\t\t||WELCOME TO THE REACTION ACCURACY GAME.|| ";
+ cout<<"\n  you have to press the enter button when the timer hits 500 to win a jackpot";
+ cout<<"\n\n        You currently have "<<user.get_money()<<" dollars";
+ do
+ {
+ cout<<"\n        how much money do you want to bet ";
+ cin>>betmoney;
+ if(betmoney>user.get_money())
+ {
+	cout<<"sorry, you have to bet less money than you have ";
+	delay(1000);
+	accuracy();
+ }
+ cout<<"\n        you bet "<<betmoney<<" dollars";
+ cout<<"\n        press to continue";
+ getch();
+
+  for(i=0;i<1000;i++)
+  {
+	cout<<"\n\t\t"<<i;
+	delay(8);
+	if(kbhit()) break;
+	clrscr();
+  }
+  if(i==500)
+  {
+	cout<<"\n|||!! YOU HAVE WON THE JACKPOT . CONGRATULATIONS. !!|||";
+	money+=4*betmoney;
+	user.update(money);
+  }
+  else if((i>=490 && i<500) || (i>500 && i<=510))
+  {
+	cout<<"\n\n        ||good job. but no jackpot for you.||";
+	cout<<"\n         you win half the money you bet";
+	money+=betmoney/2;
+	user.update(money)  ;
+  }
+  else
+  {
+	money-=betmoney;
+	user.update(money);
+	cout<<"\n         blah, sorry ";
+  }
+  cout<<"\n         you currently have "<<user.get_money()<<" dollars";
+  cout<<"\n\n\n  do you want to play more"<<"\nif you want to then enter 'y'or else enter 'n' ";
+  cin>>z;
+  if(z=='y'|| z=='Y')
+  gameon=0;
+  else gameon=1;
+  } while(gameon==0 && betmoney<user.get_money());
+
+  if(gameon==1)
+  main();
+
+ getch();
+}
+
+ void roulette()
+{
+  clrscr();
+  randomize();
+  int i,j,a,n,rou[8][14],betmoney,gameon;
+  char z;
+  cout<<"\t\t\t ||WELCOME TO ROULETTE||\n\n";
+  cout<<" The ball rolls and comes to a stop at one of the three random numbers";
+  cout<<"\n Place your bet on one of the three numbers '1' ,'2', or '0'\n\n";
+  do
+ {
+  cout<<" You currently have "<<user.get_money()<<" dollars\n";
+  cout<<" Enter your number \n";
+  cin>>a;
+  if(a>3)
+  {
+   cout<<"\n!INVALID INPUT!";
+   cout<<"\nEnter again";
+   cin>>a;
+  }
+  cout<<"\n Place your bet\n";
+  cin>>betmoney;
+  if(betmoney>user.get_money())
+   { cout<<" You don't have enough funds.";
+     cout<<"\n You currently have "<<user.get_money();
+     cin>>betmoney;
+   }
+  n=rand()%3;
+  for (int m=0;m<30;m++)
+ {  for(i=0;i<8;i++)
+  {
+   for(j=0;j<14;j++)
+    {
+	if((i==1&&j==7)||(i==4&&j==1)||(i==7&&j==7)||(i==4&&j==13))
+	{ rou[i][j]=(rand()%3);
+	 cout<<rou[i][j];
+	}
+	if((i==2&&j==5)||(i==5&&j==3)||(i==6&&j==9)||(i==3&&j==11))
+	{
+	 rou[i][j]=(rand()%3);
+	 cout<<rou[i][j];
+	}
+	 if((i==3&&j==3)||(i==6&&j==5)||(i==5&&j==11)||(i==2&&j==9))
+	{
+	 rou[i][j]=(rand()%3);
+	 cout<<rou[i][j];
+	}
+	 else cout<<" ";
+     }
+     cout<<endl;
+  }
+  delay(100);
+  clrscr();
+ }
+  for (m=0;m<20;m++)
+ {  for(i=0;i<8;i++)
+  {
+   for(j=0;j<14;j++)
+    {
+	  if((i==1&&j==7)||(i==4&&j==1)||(i==7&&j==7)||(i==4&&j==13))
+	{ rou[i][j]=(rand()%3);
+	 cout<<rou[i][j]; }
+	  if((i==2&&j==5)||(i==5&&j==3)||(i==6&&j==9)||(i==3&&j==11))
+	{ rou[i][j]=(rand()%3);
+	 cout<<rou[i][j];}
+	  if((i==3&&j==3)||(i==6&&j==5)||(i==5&&j==11)||(i==2&&j==9))
+	{ rou[i][j]=(rand()%3);
+	 cout<<rou[i][j];  }
+	if(i==0&&j==7)
+	cout<<"I";
+	else cout<<" ";
+     }
+     cout<<endl;
+  }
+  delay(300);
+  clrscr();
+}
+
+
+  for(i=0;i<8;i++)
+  {
+   for(j=0;j<14;j++)
+    {
+	 if((i==1&&j==7)||(i==4&&j==1)||(i==7&&j==7)||(i==4&&j==13))
+	 cout<<n%3;
+	 if((i==2&&j==5)||(i==5&&j==3)||(i==6&&j==9)||(i==3&&j==11))
+	 cout<<(n+1)%3;
+	 if((i==3&&j==3)||(i==6&&j==5)||(i==5&&j==11)||(i==2&&j==9))
+	 cout<<(n+2)%3;
+	 if(i==0 && j==7)
+	 cout<<"I";
+	 else cout<<" ";
+    } cout<<endl;
+   }
+
+
+    int result=n%3;
+    if(a==(n%3))
+    {
+      cout<<" !!!YOU WON!!!";
+      cout<<"\n You win 2 times the money you bet\n ";
+      money+=(2*betmoney);
+      user.update(money)  ;
+    }
+    else
+    {
+    cout<<" !! YOU LOSE !!"<<"\n better luck next time";
+    cout<<"\n You lost the money you bet";
+    money-=betmoney;
+    user.update(money) ;
+    }
+   if(user.get_money()==0)
+   {
+    cout<<"\nGoodbye. The house always wins.";
+    delay(3000);
+    exit(0);
+   }
+   cout<<"\n You currently have "<<user.get_money()<<" dollars. ";
+   cout<<"\n Would you like to continue?";
+   cout<<"\n 'y' for Yes \n 'n' for No\n";
+   cin>>z;
+   if(z=='y')
+   gameon=0;
+   else gameon=1;
+   }
+   while(user.get_money()>0&&gameon==0) ;
+   if(gameon==1)
+   main();
+   fin.close() ;
+   fout.close() ;
+}
