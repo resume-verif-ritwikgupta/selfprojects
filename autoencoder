@@ -1,0 +1,235 @@
+from google.colab import drive
+drive.mount('/content/drive')
+path = '/content/drive/My Drive/Image_Colorization/dataset_updated/training_set/'
+import numpy as np
+import pandas as pd 
+import os
+import cv2
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+import torch
+import torch.nn as nn
+from torch.autograd import Variable
+from torch.utils.data import Dataset, DataLoader
+import torchvision.transforms as transforms
+import torch.nn.functional as F
+import torch.optim as optim
+import torch.utils.data as data
+import torchvision.datasets as datasets
+import torchvision.models as models
+from PIL import Image
+from skimage import io, color
+files = os.listdir(path)
+print(files)
+torch.cuda.is_available()
+torch.backends.cudnn.enabled
+def normalize_data(data):
+    data = data / 128
+    return data
+for types in files:
+    path1 = path + types
+    print(path1)
+from PIL import Image
+from skimage import io, color
+import cv2
+
+inception_images = []
+fusion_images = []
+lab_a = []
+lab_b = []
+lab_l = []
+
+def transform_image(image, size=299, output_channels=3):
+    trans = transforms.Compose([
+    transforms.CenterCrop(size),
+    transforms.Grayscale(num_output_channels=output_channels),
+    transforms.ToTensor()
+])
+    return trans(image)
+
+def get_lab(image):
+    trans = transforms.CenterCrop(224)
+    lab = color.rgb2lab(np.array(trans(image))/255)
+    L, a, b = cv2.split(lab)
+    return (L, a, b)
+
+for types in files:
+    path1 = path  + types
+    for imagess in path1:
+      im = Image.open(path1 + imagess)
+      fusion_images.append(transform_image(im, size=224, output_channels=1))
+      inception_images.append(transform_image(im))
+      L, a, b = get_lab(im)
+      lab_l.append(L)
+      lab_a.append(a)
+      lab_b.append(b)
+
+lab_a = normalize_data(np.array(lab_a, dtype=int))  
+lab_b = normalize_data(np.array(lab_b, dtype=int))
+
+class imagedata(Dataset):
+    
+    def __init__(self):
+        super().__init__()
+        self.inception_images = inception_images
+        self.fusion_images = fusion_images
+        self.y_data = ab
+        self.len = len(self.inception_images)
+        
+    def __getitem__(self, index):
+        return self.inception_images[index], self.fusion_images[index], self.y_data[index]
+    
+    def __len__(self):
+        return self.len
+fusion_images = torch.stack(fusion_images)
+inception_images = torch.stack(inception_images)
+
+
+batch_size = 20
+imageset = imagedata()
+train_loader = torch.utils.data.DataLoader(imageset, batch_size=batch_size)
+
+odel_inception = models.inception_v3(pretrained=True).cuda()
+model_inception.transform_input = False
+model_inception.eval();
+for param in model_inception.parameters():
+    param.requires_grad = False
+
+class Encoder(nn.Module):
+    def __init__(self):
+        super(Encoder,self).__init__()
+        self.model = nn.Sequential(
+            nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3, stride=2, padding=1), 
+            nn.ReLU(inplace=True),
+            nn.BatchNorm2d(64),
+            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(inplace=True),
+            nn.BatchNorm2d(128),
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, stride=2, padding=1),
+            nn.ReLU(inplace=True),
+            nn.BatchNorm2d(128),
+            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(inplace=True),
+            nn.BatchNorm2d(256),
+            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, stride=2, padding=1),
+            nn.ReLU(inplace=True),
+            nn.BatchNorm2d(256),
+            nn.Conv2d(in_channels=256, out_channels=512, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(inplace=True),
+            nn.BatchNorm2d(512),
+            nn.Conv2d(in_channels=512, out_channels=512, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(inplace=True),
+            nn.BatchNorm2d(512),
+            nn.Conv2d(in_channels=512, out_channels=256, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(inplace=True),
+            nn.BatchNorm2d(256),
+        )
+
+    def forward(self, x):
+        self.model = self.model.float()
+        return self.model(x.float())
+
+class FusionLayer(nn.Module):
+    def __init__(self):
+        super(FusionLayer,self).__init__()
+
+    def forward(self, inputs, mask=None):
+        ip, emb = inputs
+        emb = torch.stack([torch.stack([emb],dim=2)],dim=3)
+        emb = emb.repeat(1,1,ip.shape[2],ip.shape[3])
+        fusion = torch.cat((ip,emb),1)
+        return fusion
+
+class Decoder(nn.Module):
+    def __init__(self, input_depth):
+        super(Decoder,self).__init__()
+        self.model = nn.Sequential(
+            nn.Conv2d(in_channels=input_depth, out_channels=128, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(inplace=True),
+            nn.BatchNorm2d(128),
+            nn.Upsample(scale_factor=2.0),
+            nn.Conv2d(in_channels=128, out_channels=64, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(inplace=True),
+            nn.BatchNorm2d(64),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(inplace=True),
+            nn.BatchNorm2d(64),
+            nn.Upsample(scale_factor=2.0),
+            nn.Conv2d(in_channels=64, out_channels=32, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(inplace=True),
+            nn.BatchNorm2d(32),
+            nn.Conv2d(in_channels=32, out_channels=2, kernel_size=3, stride=1, padding=1),
+            nn.Tanh(),
+            nn.Upsample(scale_factor=2.0),
+        )
+
+    def forward(self, x):
+        return self.model(x)
+
+class Colorization(nn.Module):
+    def __init__(self, depth_after_fusion):
+        super(Colorization,self).__init__()
+        self.encoder = Encoder()
+        self.fusion = FusionLayer()
+        self.after_fusion = nn.Conv2d(in_channels=1256, out_channels=depth_after_fusion,kernel_size=1, stride=1,padding=0)
+        self.bnorm = nn.BatchNorm2d(256)
+        self.decoder = Decoder(depth_after_fusion)
+
+    def forward(self, img_l, img_emb):
+        img_enc = self.encoder(img_l)
+        fusion = self.fusion([img_enc, img_emb])
+        fusion = self.after_fusion(fusion)
+        fusion = self.bnorm(fusion)
+        return self.decoder(fusion)
+
+def init_weights(m):
+    if type(m) == nn.Conv2d or type(m) == nn.Linear:
+        torch.nn.init.xavier_normal_(m.weight.data)
+
+resnet_model = models.resnet50(pretrained=True,progress=True).float().to(config.device)
+resnet_model.eval()
+resnet_model = resnet_model.float()
+
+loss_criterion = torch.nn.MSELoss(reduction='mean').to(config.device)
+
+def train(epochs):
+    count = 0
+    for epoch in range(epochs):
+        for i, (inception_images, fusion_images, target) in enumerate(train_loader):
+          target = target.cuda()
+          inception_images = torch.autograd.Variable(inception_images).cuda()
+          fusion_images = torch.autograd.Variable(fusion_images).cuda()
+          result = model(fusion_images, inception_images)
+          loss = criterion(result, target)
+          optimizer.zero_grad()
+          loss.backward()
+          optimizer.step()
+          print('Epoch {}: batch {} : Loss = {}'.format(epoch + 1, i, loss.data[0]), end='\r')\\
+          
+train(20)
+
+def create_images(colours, ix):
+    
+    lab_images = []
+    pos = ix * colours.size(0)
+    for i in range(colours.size(0)):
+        a = np.array(colours[i][0].cpu()) * 128
+        b = np.array(colours[i][1].cpu()) * 128
+        lab = np.zeros([224, 224, 3])
+        lab[:, :, 0] = lab_l[i + pos]
+        lab[:, :, 1] = a
+        lab[:, :, 2] = b
+        lab_images.append(lab)
+    
+    return lab_images
+
+for i, (inception_images, fusion_images, target) in enumerate(train_loader):
+    
+    inception_images = torch.autograd.Variable(inception_images).cuda()
+    fusion_images = torch.autograd.Variable(fusion_images).cuda()
+           
+    result = model(fusion_images, inception_images)
+    
+    ims = create_images(result.data, i)
+    if i == 3:
+        break
